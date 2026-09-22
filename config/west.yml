@@ -2,6 +2,8 @@ manifest:
   remotes:
     - name: splitkb
       url-base: https://github.com/splitkb
+    - name: urob
+      url-base: https://github.com/urob
     # Additional modules containing boards/shields/custom code can be listed here as well
     # See https://docs.zephyrproject.org/3.2.0/develop/west/manifest.html#projects
   projects:
@@ -12,5 +14,17 @@ manifest:
     - name: zmk-halcyon-module
       remote: splitkb
       revision: main
+    - name: zmk-helpers
+      remote: urob
+      revision: 95edb8f15ef1d1bd8332810555f8cf5837fbdd27
+    - name: zmk-auto-layer
+      remote: urob
+      revision: 62c201934711369d50a28df12e1d055d05cb6460
+    - name: zmk-adaptive-key
+      remote: urob
+      revision: e5b335a7b1076cb122582f5a892b118b02a3be34
+    - name: zmk-tri-state
+      remote: urob
+      revision: 0c6eaf55d2da0d85b943e02d72831c2d8ea64501
   self:
     path: config
