@@ -16,15 +16,15 @@ manifest:
       revision: main
     - name: zmk-helpers
       remote: urob
-      revision: v0.3.0
+      revision: 7bcba18fc8df27303eb92a435d33ea870cc51f98 # main (2026-09-23)
     - name: zmk-auto-layer
       remote: urob
-      revision: v0.3.0
+      revision: b50d514219c5ad61198f9a8be137c59d0674b11c # main (2026-09-23)
     - name: zmk-adaptive-key
       remote: urob
-      revision: v0.3.0
+      revision: e987227d625e8863343baf16bd11ff90310482a5 # main (2026-09-23)
     - name: zmk-tri-state
       remote: urob
-      revision: v0.3.0
+      revision: c08969627245adeddbcdb6dfc1a4c167c04160e2 # main (2026-09-23)
   self:
     path: config
