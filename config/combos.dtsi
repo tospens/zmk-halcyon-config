@@ -35,9 +35,9 @@ ZMK_COMBO(dbpar, &dblpar,       RM1 RM3,     BASE NAV NUM, COMBO_TERM_SLOW)
 ZMK_COMBO(dbbkt, &dblbkt,       RB1 RB3,     BASE NAV NUM, COMBO_TERM_SLOW)
 
 /* Danish letters */
-ZMK_COMBO(da_aa, &dk_aa,        RT3 RT4,     BASE, COMBO_TERM_FAST)
-ZMK_COMBO(da_ae, &dk_ae,        RM3 RM4,     BASE, COMBO_TERM_FAST)
-ZMK_COMBO(da_oe, &dk_oe,        RB3 RB4,     BASE, COMBO_TERM_FAST)
+ZMK_COMBO(da_aa, &da_aa,        RT3 RT4,     BASE, COMBO_TERM_FAST)
+ZMK_COMBO(da_ae, &da_ae,        RM3 RM4,     BASE, COMBO_TERM_FAST)
+ZMK_COMBO(da_oe, &da_oe,        RB3 RB4,     BASE, COMBO_TERM_FAST)
 
 /* Vertical combos - left hand */
 ZMK_COMBO(at,    &kp AT,        LT3 LM3,     BASE NAV NUM, COMBO_TERM_SLOW)
