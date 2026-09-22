@@ -16,15 +16,15 @@ manifest:
       revision: main
     - name: zmk-helpers
       remote: urob
-      revision: v0.3
+      revision: v0.3.0
     - name: zmk-auto-layer
       remote: urob
-      revision: v0.3
+      revision: v0.3.0
     - name: zmk-adaptive-key
       remote: urob
-      revision: v0.3
+      revision: v0.3.0
     - name: zmk-tri-state
       remote: urob
-      revision: v0.3
+      revision: v0.3.0
   self:
     path: config
