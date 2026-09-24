@@ -78,9 +78,23 @@ ZMK_CONDITIONAL_LAYER(sys, FN NUM, SYS) // FN + NUM --> SYS
 // Misc
 #define U_PSCR LC(PSCRN)
 
-// Halcyon encoder sensor bindings — left encoder: volume, right encoder: page up/down
-// (matches the stock halcyon_ferris.keymap convention on every layer)
-#define SENSORS &inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN
+/* Halcyon extras — used at the end of every layer below */
+
+// Extra key row provided by the Halcyon controller (halcyon_transform row 4:
+// 5 direct-GPIO inputs per side, separate from the 34-key matrix). The outermost
+// position on each side is the mod_encoder push button; the other positions are
+// not wired to any module fitted on this build.
+//
+// Arguments are the left and right encoder push-button bindings.
+#define HALCYON_KEYS(left_press, right_press) \
+    left_press &none &none &none &none   &none &none &none &none right_press
+
+// Encoder rotation (passed to ZMK_LAYER as its sensor-bindings argument).
+// Each entry is <left encoder> <right encoder>; inc_dec_kp takes clockwise first.
+// left = volume on every layer. right = undo/redo by default, with overrides below.
+#define SENSORS       &inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp U_RDO U_UND    // right: CW redo, CCW undo
+#define SENSORS_FN    &inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp C_VOL_UP C_VOL_DN // right: volume
+#define SENSORS_MOUSE &inc_dec_kp C_VOL_UP C_VOL_DN &scroll_encoder            // right: mouse wheel (mouse.dtsi)
 
 /* Homerow mods */
 
@@ -126,6 +140,11 @@ ZMK_MACRO(dblbkt,
     tap-ms = <20>;
     bindings = <&kp LBKT &kp RBKT>, <&kp LEFT>;
 )
+ZMK_MACRO(dblang,
+    wait-ms = <10>;
+    tap-ms = <20>;
+    bindings = <&kp LT &kp GT>, <&kp LEFT>;
+)
 ZMK_MACRO(winleft,
     wait-ms = <10>;
     tap-ms = <20>;
@@ -153,47 +172,55 @@ ZMK_MACRO(winup,
     , <&macro_release &kp LGUI>
     ;
 )
-ZMK_MACRO(selwordstart,
+// Select word. First press selects the word under the cursor; each further press
+// extends by one word (LEFT extends backwards). Ctrl+Shift stay held until the
+// tri-state ends, so the arrow keys move the selection by whole words.
+// The tri-state's continue binding also fires on the first press, so the start
+// macro only positions the cursor and turns the mods on; the first RIGHT selects.
+ZMK_MACRO(selword_start,
     wait-ms = <10>;
     tap-ms = <20>;
-    bindings
-    = <&kt LCTRL>, <&kp RIGHT>, <&kp LEFT>, <&kt LSHFT>, <&kp RIGHT>;
+    bindings = <&kt LCTRL>, <&kp RIGHT>, <&kp LEFT>, <&kt LSHFT>;
 )
-ZMK_MACRO(selwordend,
+ZMK_MACRO(selword_end,
     wait-ms = <10>;
     tap-ms = <20>;
-    bindings
-    = <&kt LCTRL>, <&kt LSHFT>;
+    bindings = <&kt LSHFT>, <&kt LCTRL>;
 )
 ZMK_TRI_STATE(selword,
-    bindings = <&selwordstart>, <NAV_RIGHT>, <&selwordend>;
-    ignored-key-positions = <RM1>;
+    bindings = <&selword_start>, <&kp RIGHT>, <&selword_end>;
+    ignored-key-positions = <RM1>; // LEFT: extend backwards
 )
-ZMK_MACRO(selline,
+
+// Select line. First press selects the current line from its first non-blank
+// character to the end; each further press extends the selection by one line.
+// END before HOME makes HOME land on the indentation in "smart home" editors
+// (VS Code, JetBrains) instead of toggling between indentation and column 0.
+// Continue also fires on the first press, so start leaves the selection one
+// character short (Shift+Left); continue's Shift+Right undoes that on the first
+// press and crosses into the next line on later presses, then Shift+End.
+ZMK_MACRO(selline_start,
     wait-ms = <10>;
     tap-ms = <20>;
-    bindings
-    = <&macro_tap     &kp HOME>
-    , <&macro_press   &kp LSHFT>
-    , <&macro_tap     &kp END>
-    , <&macro_release &kp LSHFT>
-    ;
+    bindings = <&kp END &kp HOME &kp LS(LEFT)>;
 )
+ZMK_MACRO(selline_extend,
+    wait-ms = <10>;
+    tap-ms = <20>;
+    bindings = <&kp LS(RIGHT) &kp LS(END)>;
+)
+ZMK_TRI_STATE(selline,
+    bindings = <&selline_start>, <&selline_extend>, <&none>;
+)
+
+// Join lines. Joins the next line onto this one, replacing the line break and
+// the next line's indentation with one space: go to the next line's first
+// non-blank character, select back to the end of this line, type a space.
+// Press again to join the following line too.
 ZMK_MACRO(joinln,
     wait-ms = <10>;
     tap-ms = <20>;
-    bindings
-    = <&macro_tap     &kp END>
-    , <&macro_tap     &kp DEL>
-    , <&macro_press   &kp LCTRL>
-    , <&macro_tap     &kp RIGHT>
-    , <&macro_tap     &kp LEFT>
-    , <&macro_press   &kp LSHFT>
-    , <&macro_tap     &kp LEFT>
-    , <&macro_tap     &kp RIGHT>
-    , <&macro_release &kp LSHFT &kp LCTRL>
-    , <&macro_tap     &kp SPACE>
-    ;
+    bindings = <&kp DOWN &kp END &kp HOME &kp LS(UP) &kp LS(END) &kp SPACE>;
 )
 
 // Windows sleep key
@@ -211,6 +238,17 @@ ZMK_TRI_STATE(swap,
 ZMK_TRI_STATE(tabswap,
     bindings = <&kt LCTRL>, <&kp TAB>, <&kt LCTRL>;
     ignored-key-positions = <LT2>;
+)
+
+// Smart-mouse (urob/zmk-config): the LT3+LT1 combo turns on the MOUSE layer, and it
+// stays on until a key outside ignored-key-positions is pressed (that key still fires).
+// Ignored: the combo keys, the thumbs (hold for NAV = faster / FN = slower pointer, see
+// mouse.dtsi), and every key used on the mouse layer. ignored-layers keeps MOUSE, NAV
+// and FN from ending it when they activate.
+ZMK_TRI_STATE(smart_mouse,
+    bindings = <&tog MOUSE>, <&none>, <&tog MOUSE>;
+    ignored-key-positions = <LT3 LT1 LH0 LH1 RT2 RM1 RM2 RM3 RB1 RB2 RB3 RH0 RH1>;
+    ignored-layers = <MOUSE NAV FN>;
 )
 
 // tap: backspace | lshft + tap: delete | rshft + tap: shift-delete | hold: FN layer
@@ -281,118 +319,104 @@ ZMK_ADAPTIVE_KEY(shift_repeat,
 
 /* Keymap */
 
+// -------------------------------------------------------------------------------------
+// |   Q   |   W   |   E   |   R   |   T   |   |   Y   |   U   |   I   |   O   |   P   |
+// | A/GUI | S/ALT | D/CTL | F/SFT |   G   |   |   H   | J/SFT | K/CTL | L/ALT | ;/GUI |
+// |   Z   |   X   |   C   |   V   |   B   |   |   N   |   M   |   ,   |   .   |   /   |
+//                         |SPC/NAV|BSPC/FN|   |  NUM  | MAGIC |
+// encoders: left press GUI, turn volume | right press GUI, turn undo/redo
+// Home-row mods on the middle row. NUM: tap num-word, hold NUM. MAGIC: tap repeat/sticky shift, hold shift.
 ZMK_LAYER(QWERTY,
-//╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
     &kp Q         &kp W         &kp E         &kp R         &kp T           &kp Y         &kp U         &kp I         &kp O         &kp P
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &hml LGUI A   &hml LALT S   &hml LCTRL D  &hml LSHFT F  &kp G           &kp H         &hmr RSHFT J  &hmr LCTRL K  &hmr LALT L   &hmr LGUI SEMI
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &kp Z         &kp X         &kp C         &kp V         &kp B           &kp N         &kp M         &kp COMMA     &kp DOT       &kp FSLH
-//╰─────────────┼─────────────┴─────────────┼─────────────┤ ╰─────────────┤ ├─────────────┼─────────────┼─────────────┴─────────────╯
                   &lt_spc NAV 0                 &lt_bspc FN 0                 SMART_NUM     MAGIC_SHIFT
-//               ╰─────────────╯             ╰─────────────╯               ╰─────────────╯ ╰─────────────╯
 
-    &kp RGUI &none &none &none &none                                      &none &none &none &none &kp RGUI
-    , SENSORS
+    HALCYON_KEYS(&kp RGUI, &kp RGUI) // encoder push buttons: left, right
+    , SENSORS                        // encoder rotation: left = volume, right = undo/redo
 )
 
+// -------------------------------------------------------------------------------------
+// |  UNDO |  REDO | S-TAB |  SWAP | TABSWP|   | SELLN |  BSPC | ENTER |  DEL  |       |
+// |  sGUI |  sALT |  sCTL |  sSFT |  PSCR |   | SELWD |  LEFT |  DOWN |   UP  | RIGHT |
+// |  MON< |  WIN< |  WIN^ |  WIN> |  MON> |   |  JOIN |  TAB  | PG DN | PG UP |  END  |
+//                         |       |       |   | ENTER | CANCEL|
+// encoders: left press GUI, turn volume | right press GUI, turn undo/redo
+// s = sticky mod. Hold LEFT/RIGHT = Home/End, UP/DOWN = document start/end, BSPC/DEL = delete word.
+// SELWD/SELLN: press again (while holding NAV) to extend by a word/line. JOIN: join next line.
 ZMK_LAYER(nav,
-//╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
     &kp U_UND     &kp U_RDO     &kp LS(TAB)   &swap         &tabswap        &selline      NAV_BSPC      &kp ENTER     NAV_DEL       &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &sk LGUI      &sk LALT      &sk LCTRL     &sk LSHFT     &kp U_PSCR      &selword      NAV_LEFT      NAV_DOWN      NAV_UP        NAV_RIGHT
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &kp U_SLFT    &winleft      &winup        &winrght      &kp U_SRGT      &joinln       &kp TAB       &kp PG_DN     &kp PG_UP     &kp END
-//╰─────────────┼─────────────┴─────────────┼─────────────┤ ╰─────────────┤ ├─────────────┼─────────────┼─────────────┴─────────────╯
                   &trans                        &trans                        &kp ENTER     CANCEL
-//               ╰─────────────╯             ╰─────────────╯               ╰─────────────╯ ╰─────────────╯
 
-    &kp RGUI &none &none &none &none                                      &none &none &none &none &kp RGUI
-    , SENSORS
+    HALCYON_KEYS(&kp RGUI, &kp RGUI) // encoder push buttons: left, right
+    , SENSORS                        // encoder rotation: left = volume, right = undo/redo
 )
 
+// -------------------------------------------------------------------------------------
+// |       |   7   |   8   |   9   |       |   |       |       |       |       |       |
+// | 0/GUI | 4/ALT | 5/CTL | 6/SFT |       |   |       |       |       |       |       |
+// |       |   1   |   2   |   3   |       |   |       |       |       |       |       |
+//                         |       |       |   |       |       |
+// encoders: left press GUI, turn volume | right press GUI, turn undo/redo
 ZMK_LAYER(num,
-//╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
     &trans        &kp N7        &kp N8        &kp N9        &trans          &trans        &trans        &trans        &trans        &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &hml LGUI N0  &hml LALT N4  &hml LCTRL N5 &hml LSHFT N6 &trans          &trans        &trans        &trans        &trans        &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &trans        &kp N1        &kp N2        &kp N3        &trans          &trans        &trans        &trans        &trans        &trans
-//╰─────────────┼─────────────┴─────────────┼─────────────┤ ╰─────────────┤ ├─────────────┼─────────────┼─────────────┴─────────────╯
                   &trans                        &trans                        &trans        &trans
-//               ╰─────────────╯             ╰─────────────╯               ╰─────────────╯ ╰─────────────╯
 
-    &kp RGUI &none &none &none &none                                      &none &none &none &none &kp RGUI
-    , SENSORS
+    HALCYON_KEYS(&kp RGUI, &kp RGUI) // encoder push buttons: left, right
+    , SENSORS                        // encoder rotation: left = volume, right = undo/redo
 )
 
+// -------------------------------------------------------------------------------------
+// |  F12  |   F7  |   F8  |   F9  |       |   |       |  PREV |  VOL+ |  NEXT | SLEEP |
+// |  F11  |   F4  |   F5  |   F6  |       |   |       | DSK</S| VOL-/C| DSK>/A|       |
+// |  F10  |   F1  |   F2  |   F3  |       |   |       |       |       |       |       |
+//                         |       |       |   |  MUTE |  PLAY |
+// encoders: left press GUI, turn volume | right press MUTE, turn volume
+// DSK = previous/next virtual desktop; /S /C /A = shift/ctrl/alt on hold.
 ZMK_LAYER(fn,
-//╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
     &kp F12       &kp F7        &kp F8        &kp F9        &trans          &trans        &kp C_PREV    &kp C_VOL_UP  &kp C_NEXT    &win_sleep
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &kp F11       &kp F4        &kp F5        &kp F6        &trans          &trans        DSK_PREV      VOL_DOWN      DSK_NEXT      &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &kp F10       &kp F1        &kp F2        &kp F3        &trans          &trans        &trans        &trans        &trans        &trans
-//╰─────────────┼─────────────┴─────────────┼─────────────┤ ╰─────────────┤ ├─────────────┼─────────────┼─────────────┴─────────────╯
                   &trans                        &trans                        &kp C_MUTE    &kp C_PP
-//               ╰─────────────╯             ╰─────────────╯               ╰─────────────╯ ╰─────────────╯
 
-    &kp RGUI &none &none &none &none                                      &none &none &none &none &kp RGUI
-    , SENSORS
+    HALCYON_KEYS(&kp RGUI, &kp C_MUTE) // encoder push buttons: left, right = mute
+    , SENSORS_FN                         // encoder rotation: left = volume, right = volume
 )
 
+// -------------------------------------------------------------------------------------
+// |  BT 0 |  BT 1 |  BT 2 |  BT 3 |  BT 4 |   |       |       |       |       | STUDIO|
+// |  BT-  |  BT+  |       |       |       |   |       |       |       |       |       |
+// | BT CLR|       |       |       |       |   |       |       |       |       |  BOOT |
+//                         |       |       |   |       |       |
+// encoders: left press GUI, turn volume | right press GUI, turn undo/redo
+// Active while FN + NUM are held. STUDIO = ZMK Studio unlock, BOOT = bootloader (right half).
 ZMK_LAYER(sys,
-//╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
-    &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4    &trans        &trans        &trans        &trans        &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-    &trans        &trans        &trans        &trans        &trans          &trans        &trans        &trans        &trans        &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-    &bt BT_CLR    &trans        &trans        &trans        &trans          &trans        &trans        &trans        &trans        &trans
-//╰─────────────┼─────────────┴─────────────┼─────────────┤ ╰─────────────┤ ├─────────────┼─────────────┼─────────────┴─────────────╯
+    &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4    &trans        &trans        &trans        &trans        &studio_unlock
+    &bt BT_PRV    &bt BT_NXT    &trans        &trans        &trans          &trans        &trans        &trans        &trans        &trans
+    &bt BT_CLR    &trans        &trans        &trans        &trans          &trans        &trans        &trans        &trans        &bootloader
                   &trans                        &trans                        &trans        &trans
-//               ╰─────────────╯             ╰─────────────╯               ╰─────────────╯ ╰─────────────╯
 
-    &kp RGUI &none &none &none &none                                      &none &none &none &none &kp RGUI
-    , SENSORS
+    HALCYON_KEYS(&kp RGUI, &kp RGUI) // encoder push buttons: left, right
+    , SENSORS                        // encoder rotation: left = volume, right = undo/redo
 )
 
+// -------------------------------------------------------------------------------------
+// |       |       |       |       |       |   |       |       | MS UP |       |       |
+// |       |       |       |       |       |   |       | MS LT | MS DN | MS RT |       |
+// |       |       |       |       |       |   |       | WH LT | WH DN | WH RT |       |
+//                         |       |       |   |  RCLK |  LCLK |
+// encoders: left press GUI, turn volume | right press GUI, turn mouse wheel
+// Smart-mouse: LT3+LT1 combo turns it on; any key not shown here (except thumbs) turns it off.
 ZMK_LAYER(mouse,
-//╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
     &trans        &trans        &trans        &trans        &trans          &trans        &trans        U_MS_U        &trans        &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &trans        &trans        &trans        &trans        &trans          &trans        U_MS_L        U_MS_D        U_MS_R        &trans
-//├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
     &trans        &trans        &trans        &trans        &trans          &trans        U_WH_L        U_WH_D        U_WH_R        &trans
-//╰─────────────┼─────────────┴─────────────┼─────────────┤ ╰─────────────┤ ├─────────────┼─────────────┼─────────────┴─────────────╯
                   &trans                        &trans                        &mkp RCLK     &mkp LCLK
-//               ╰─────────────╯             ╰─────────────╯               ╰─────────────╯ ╰─────────────╯
 
-    &kp RGUI &none &none &none &none                                      &none &none &none &none &kp RGUI
-    , SENSORS
+    HALCYON_KEYS(&kp RGUI, &kp RGUI) // encoder push buttons: left, right
+    , SENSORS_MOUSE                  // encoder rotation: left = volume, right = mouse wheel
 )
-
-/* Vendor-provided "always accessible" layer, copied unchanged from the stock
- * zmk-halcyon-module halcyon_ferris.keymap (BT quick-access + bootloader). */
-/ {
-    keymap {
-        compatible = "zmk,keymap";
-
-        always {
-            display-name = "Always accessible";
-// -----------------------------------------------------------------------------------------
-// | BT+   |     |  :  | ESC |STDIO|   |     |     |       |       |  DEL |
-// | BT_CLR|  %  |  /  | RET |     |   |     | GUI |       |       |      |
-// | BT-   |     |     |  !  |     |   |     |     | RA(,) | RC(.) | BOOT |
-//                     |     | TAB |   |     |     |
-            bindings = <
-&bt BT_NXT &trans      &kp COLON &kp ESC   &studio_unlock &trans &trans   &trans         &trans        &kp DEL
-&bt BT_CLR &kp PERCENT &kp FSLH  &kp ENTER &trans         &trans         &kp LGUI &trans         &trans        &trans
-&bt BT_PRV &trans      &trans    &kp EXCL  &trans         &trans         &trans   &mt RALT COMMA &mt RCTRL DOT &bootloader
-                                   &trans &kp TAB         &none &trans
-
-&trans &trans &trans &trans &trans                                           &trans &trans &trans &trans &trans
-            >;
-            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp PG_UP PG_DN>;
-        };
-    };
-};
