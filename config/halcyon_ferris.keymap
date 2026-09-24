@@ -247,7 +247,7 @@ ZMK_TRI_STATE(tabswap,
 // and FN from ending it when they activate.
 ZMK_TRI_STATE(smart_mouse,
     bindings = <&tog MOUSE>, <&none>, <&tog MOUSE>;
-    ignored-key-positions = <LT3 LT1 LH0 LH1 RT2 RM1 RM2 RM3 RB1 RB2 RB3 RH0 RH1>;
+    ignored-key-positions = <LT3 LT1 LH0 LH1 RT1 RT2 RT3 RM1 RM2 RM3 RB1 RB2 RB3 RH0 RH1>;
     ignored-layers = <MOUSE NAV FN>;
 )
 
@@ -337,7 +337,7 @@ ZMK_LAYER(QWERTY,
 )
 
 // -------------------------------------------------------------------------------------
-// |  UNDO |  REDO | S-TAB |  SWAP | TABSWP|   | SELLN |  BSPC | ENTER |  DEL  |       |
+// |  UNDO |  REDO | S-TAB |  SWAP | TABSWP|   | SELLN |  BSPC | ENTER |  DEL  |  HOME |
 // |  sGUI |  sALT |  sCTL |  sSFT |  PSCR |   | SELWD |  LEFT |  DOWN |   UP  | RIGHT |
 // |  MON< |  WIN< |  WIN^ |  WIN> |  MON> |   |  JOIN |  TAB  | PG DN | PG UP |  END  |
 //                         |       |       |   | ENTER | CANCEL|
@@ -345,7 +345,7 @@ ZMK_LAYER(QWERTY,
 // s = sticky mod. Hold LEFT/RIGHT = Home/End, UP/DOWN = document start/end, BSPC/DEL = delete word.
 // SELWD/SELLN: press again (while holding NAV) to extend by a word/line. JOIN: join next line.
 ZMK_LAYER(nav,
-    &kp U_UND     &kp U_RDO     &kp LS(TAB)   &swap         &tabswap        &selline      NAV_BSPC      &kp ENTER     NAV_DEL       &trans
+    &kp U_UND     &kp U_RDO     &kp LS(TAB)   &swap         &tabswap        &selline      NAV_BSPC      &kp ENTER     NAV_DEL       &kp HOME
     &sk LGUI      &sk LALT      &sk LCTRL     &sk LSHFT     &kp U_PSCR      &selword      NAV_LEFT      NAV_DOWN      NAV_UP        NAV_RIGHT
     &kp U_SLFT    &winleft      &winup        &winrght      &kp U_SRGT      &joinln       &kp TAB       &kp PG_DN     &kp PG_UP     &kp END
                   &trans                        &trans                        &kp ENTER     CANCEL
@@ -405,14 +405,14 @@ ZMK_LAYER(sys,
 )
 
 // -------------------------------------------------------------------------------------
-// |       |       |       |       |       |   |       |       | MS UP |       |       |
+// |       |       |       |       |       |   |       | WH DN | MS UP | WH UP |       |
 // |       |       |       |       |       |   |       | MS LT | MS DN | MS RT |       |
 // |       |       |       |       |       |   |       | WH LT | WH DN | WH RT |       |
 //                         |       |       |   |  RCLK |  LCLK |
 // encoders: left press GUI, turn volume | right press GUI, turn mouse wheel
 // Smart-mouse: LT3+LT1 combo turns it on; any key not shown here (except thumbs) turns it off.
 ZMK_LAYER(mouse,
-    &trans        &trans        &trans        &trans        &trans          &trans        &trans        U_MS_U        &trans        &trans
+    &trans        &trans        &trans        &trans        &trans          &trans        U_WH_D        U_MS_U        U_WH_U        &trans
     &trans        &trans        &trans        &trans        &trans          &trans        U_MS_L        U_MS_D        U_MS_R        &trans
     &trans        &trans        &trans        &trans        &trans          &trans        U_WH_L        U_WH_D        U_WH_R        &trans
                   &trans                        &trans                        &mkp RCLK     &mkp LCLK
